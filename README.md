@@ -1,9 +1,11 @@
 # Unity TCP
 async/await TCP socket implementation for Unity3d.
 
-![thumbnail](https://github.com/kodai100/Unity_TCP/blob/master/Assets/UnityTCP/Textures/thumbnail.png)
-
 # How to use
+
+## Installation
+In Package manager click plus button and click "add package from git URL". Then enter follow link:
+`https://github.com/iAcolyte/UniTCP.git?path=Assets`
 
 ## As a server
 1. Attatch `UnityTCP.cs` to arbitary GameObject
