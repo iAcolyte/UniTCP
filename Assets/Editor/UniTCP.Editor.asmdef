@@ -1,0 +1,18 @@
+{
+    "name": "UniTCP.Editor",
+    "rootNamespace": "UniTCP.Editor",
+    "references": [
+        "GUID:12410cba7ffb94f3f86596643d356c33"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

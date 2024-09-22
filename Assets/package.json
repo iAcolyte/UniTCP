@@ -1,0 +1,19 @@
+{
+    "name": "com.iacolyte.unitcp",
+    "version": "1.0.0",
+    "displayName": "Unity TCP",
+    "description": "async/await TCP socket implementation for Unity3d.",
+    "unity": "2021.3",
+    "unityRelease": "40f1",
+    "documentationUrl": "https://example.com/",
+    "changelogUrl": "https://example.com/changelog.html",
+    "licensesUrl": "https://example.com/licensing.html",
+    "dependencies": {},
+    "keywords": [
+        "TCP"
+    ],
+    "author": {
+        "name": "kodai100",
+        "url": "https://github.com/iAcolyte/UniTCP"
+    }
+}

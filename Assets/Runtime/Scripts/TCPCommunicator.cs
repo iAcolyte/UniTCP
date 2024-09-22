@@ -5,25 +5,19 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Kodai100.Tcp
-{
+namespace Kodai100.Tcp {
+    internal class TcpCommunicator: IDisposable {
 
-    public class TcpCommunicator : IDisposable
-    {
-        
         public string Name { get; }
 
-        public bool IsConnecting {
+        public bool IsConnected {
             get {
-                try
-                {
+                try {
                     if ((TcpClient == null) || !TcpClient.Connected) return false;
                     if (Socket == null) return false;
 
                     return !(Socket.Poll(1, SelectMode.SelectRead) && (Socket.Available <= 0));
-                }
-                catch
-                {
+                } catch {
                     return false;
                 }
             }
@@ -40,8 +34,7 @@ namespace Kodai100.Tcp
         private bool running = false;
 
 
-        public TcpCommunicator(TcpClient tcpClient, OnMessageEvent onMessage)
-        {
+        public TcpCommunicator(TcpClient tcpClient, OnMessageEvent onMessage) {
             this.TcpClient = tcpClient ?? throw new ArgumentNullException(nameof(tcpClient));
             this.Name = $"[{Socket.RemoteEndPoint}]";
 
@@ -49,68 +42,55 @@ namespace Kodai100.Tcp
             this.OnMessage = onMessage;
         }
 
-        public TcpCommunicator(string host, int port, OnMessageEvent onMessage) : this(new TcpClient(host, port), onMessage)
-        {
+        public TcpCommunicator(string host, int port, OnMessageEvent onMessage) : this(new TcpClient(host, port), onMessage) {
         }
 
-        public void Dispose()
-        {
-            if (TcpClient != null)
-            {
+        public void Dispose() {
+            if (TcpClient != null) {
                 running = false;
 
                 TcpClient.Close();
                 (TcpClient as IDisposable).Dispose();
-                
+
             }
         }
 
 
 
-        public void Send(byte[] data)
-        {
+        public void Send(byte[] data) {
             if (data == null) throw new ArgumentNullException(nameof(data));
-            if (!IsConnecting) throw new InvalidOperationException();
+            if (!IsConnected) throw new InvalidOperationException();
 
-            try
-            {
+            try {
                 var stream = TcpClient.GetStream();
                 stream.Write(data, 0, data.Length);
-            }
-            catch (Exception ex)
-            {
+            } catch (Exception ex) {
                 throw new ApplicationException("Attempt to send failed.", ex);
             }
         }
 
 
-        public async Task Listen()
-        {
+        public async Task Listen() {
 
             if (TcpClient == null) return;
-            
+
             running = true;
 
-            while (running)
-            {
+            while (running) {
                 await Task.Run(() => Receive());
             }
-            
+
         }
-        
-        public async Task Receive()
-        {
-            if (!IsConnecting)
-            {
+
+        public async Task Receive() {
+            if (!IsConnected) {
                 throw new InvalidOperationException();
             }
 
-            try
-            {
+            try {
                 var stream = TcpClient.GetStream();
 
-                while (stream.DataAvailable)
-                {
+                while (stream.DataAvailable) {
                     var reader = new StreamReader(stream, Encoding.UTF8);
 
                     var str = await reader.ReadLineAsync();
@@ -118,12 +98,10 @@ namespace Kodai100.Tcp
                     mainContext.Post(_ => OnMessage.Invoke(str), null);
                 }
 
-            }
-            catch (Exception ex)
-            {
+            } catch (Exception ex) {
                 throw new ApplicationException("Attempt to receive failed.", ex);
             }
         }
-        
+
     }
 }
