@@ -10,8 +10,7 @@ using UnityEngine;
 namespace UniTCP {
     public static class UniTCPUtilities {
         public static byte[] BuildMessage(string data) {
-            var terminator = "\r\n";
-            return Encoding.GetEncoding("UTF-8").GetBytes($"{data}{terminator}");
+            return Encoding.GetEncoding("UTF-8").GetBytes(data);
         }
 
         public static Task<T> WithCancellation<T>(this Task<T> task, CancellationToken cancellationToken) {

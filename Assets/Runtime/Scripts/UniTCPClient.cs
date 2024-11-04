@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -22,7 +23,7 @@ namespace UniTCP {
         }
 
         public IPEndPoint EndPoint {
-            get => new IPEndPoint(Host, port);
+            get => new(Host, port);
             set {
                 Host = value.Address;
                 port = (ushort)value.Port;
@@ -61,17 +62,10 @@ namespace UniTCP {
         private TcpCommunicator? tcpClient;
         private Coroutine? availabilityRoutine;
 
-        private IEnumerator Start() {
-            messageReceived.AddListener(Debug.Log);
-            yield return new WaitForSeconds(5);
-            SendMessageToServer("Hello");
-
-        }
-
         private void OnEnable() {
             try {
                 tcpClient = new TcpCommunicator(host, port, messageReceived);
-                _ = tcpClient.Listen();
+                Task.Run(tcpClient.Listen);
             } catch (SocketException ex) {
                 Debug.LogError($"SocketException : {ex.Message}");
                 if (!autoReconnect) {
@@ -81,6 +75,7 @@ namespace UniTCP {
                 StartCoroutine(ReconnectAttempt());
                 return;
             }
+            connected.Invoke();
             availabilityRoutine = StartCoroutine(CheckAliveLoop());
         }
 
@@ -112,13 +107,20 @@ namespace UniTCP {
             tcpClient?.Dispose();
         }
 
-        public void SendMessageToServer(string data) {
+        public void SendMessageToServer(string data, bool withTerminator = false) {
             if (!IsConnected) {
                 LostConnectionBehaviour();
                 throw new InvalidOperationException("Client not connected");
             }
             try {
-                tcpClient?.Send(UniTCPUtilities.BuildMessage(data));
+                if (!string.IsNullOrEmpty(data)) {
+                    tcpClient?.Send(UniTCPUtilities.BuildMessage(data));
+                }
+
+                if (withTerminator) {
+                    tcpClient?.Stream?.WriteByte((byte)'\0');
+                }
+
             } catch (InvalidOperationException) {
                 LostConnectionBehaviour();
             }

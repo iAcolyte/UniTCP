@@ -2,6 +2,7 @@
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading.Tasks;
 using UnityEngine;
 
 namespace Kodai100.Tcp {
@@ -37,7 +38,7 @@ namespace Kodai100.Tcp {
                 return;
             }
             tcpClient = new TcpCommunicator(host, port, OnMessage);
-            _ = tcpClient.Listen();
+            Task.Run(tcpClient.Listen);
         }
 
         public void BroadcastToClients(string data) {

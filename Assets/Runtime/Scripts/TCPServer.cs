@@ -145,9 +145,29 @@ namespace Kodai100.Tcp {
                     var reader = new StreamReader(stream, Encoding.UTF8);
 
                     while (!reader.EndOfStream) {
-                        // TODO : currently, supported string decode only
-                        var str = await reader.ReadLineAsync().WithCancellation(token);
-                        mainContext.Post(_ => OnMessage.Invoke(str), null);
+                        await Task.Run(() => {
+                            var bytes = new System.Collections.Generic.List<byte>(1024);
+                            int next = -1;
+                            char prev = '\0';
+                            while (true) {
+                                next = reader.Read();
+                                if (next == 10) {
+                                    var r1 = Encoding.UTF8.GetString(bytes.ToArray());
+                                    bytes.Clear();
+                                    mainContext.Post(_ => OnMessage.Invoke(r1), null);
+                                    continue;
+                                }
+                                prev = (char)next;
+                                bytes.Add((byte)next);
+                                if ((char)next == '\0' || next == -1) {
+                                    break;
+                                }
+                            };
+                            if (bytes.Count > 0) {
+                                var res = Encoding.UTF8.GetString(bytes.ToArray());
+                                mainContext.Post(_ => OnMessage.Invoke(res), null);
+                            }
+                        });
                     }
 
                 }

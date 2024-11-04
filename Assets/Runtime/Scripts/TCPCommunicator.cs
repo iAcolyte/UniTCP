@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using UniTCP;
 
 namespace Kodai100.Tcp {
     internal class TcpCommunicator: IDisposable {
@@ -25,6 +27,9 @@ namespace Kodai100.Tcp {
 
 
         private TcpClient TcpClient { get; }
+
+        private NetworkStream? stream;
+        public NetworkStream? Stream => stream ??= TcpClient?.GetStream();
 
         private Socket Socket => TcpClient?.Client;
 
@@ -77,25 +82,44 @@ namespace Kodai100.Tcp {
             running = true;
 
             while (running) {
-                await Task.Run(() => Receive());
+                await Receive();
             }
-
         }
-
         public async Task Receive() {
             if (!IsConnected) {
                 throw new InvalidOperationException();
             }
 
             try {
-                var stream = TcpClient.GetStream();
 
-                while (stream.DataAvailable) {
-                    var reader = new StreamReader(stream, Encoding.UTF8);
+                while (Stream.DataAvailable) {
+                    using var reader = new StreamReader(Stream, Encoding.UTF8, false, 4096, leaveOpen: true);
+                    await Task.Run(() => {
+                        var bytes = new System.Collections.Generic.List<byte>(1024);
+                        int next = -1;
+                        char prev = '\0';
+                        while (true) {
+                            next = reader.Read();
 
-                    var str = await reader.ReadLineAsync();
 
-                    mainContext.Post(_ => OnMessage.Invoke(str), null);
+                            if (next == 10) {
+                                var r1 = Encoding.UTF8.GetString(bytes.ToArray());
+                                bytes.Clear();
+                                mainContext.Post(_ => OnMessage.Invoke(r1), null);
+                                continue;
+                            }
+                            prev = (char)next;
+                            bytes.Add((byte)next);
+                            if ((char)next == '\0' || next == -1) {
+                                break;
+                            }
+                        };
+                        if (bytes.Count > 0) {
+                            var res = Encoding.UTF8.GetString(bytes.ToArray());
+                            mainContext.Post(_ => OnMessage.Invoke(res), null);
+                        }
+
+                    });
                 }
 
             } catch (Exception ex) {
