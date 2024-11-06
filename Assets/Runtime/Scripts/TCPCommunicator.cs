@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UniTCP;
+using UnityEngine.Events;
 
 namespace Kodai100.Tcp {
     internal class TcpCommunicator: IDisposable {
@@ -25,8 +26,7 @@ namespace Kodai100.Tcp {
             }
         }
 
-
-        private TcpClient TcpClient { get; }
+        private TcpClient TcpClient { get; set; }
 
         private NetworkStream? stream;
         public NetworkStream? Stream => stream ??= TcpClient?.GetStream();
@@ -34,33 +34,35 @@ namespace Kodai100.Tcp {
         private Socket Socket => TcpClient?.Client;
 
         private SynchronizationContext mainContext;
-        private OnMessageEvent OnMessage;
+        private UnityEvent<string> OnMessage;
 
         private bool running = false;
 
-
-        public TcpCommunicator(TcpClient tcpClient, OnMessageEvent onMessage) {
-            this.TcpClient = tcpClient ?? throw new ArgumentNullException(nameof(tcpClient));
+        public TcpCommunicator(UnityEvent<string> onMessage) {
+            this.TcpClient = new();
             this.Name = $"[{Socket.RemoteEndPoint}]";
-
             this.mainContext = SynchronizationContext.Current;
             this.OnMessage = onMessage;
         }
 
-        public TcpCommunicator(string host, int port, OnMessageEvent onMessage) : this(new TcpClient(host, port), onMessage) {
+        public async Task Connect(string host, int port) {
+            var connectTask = TcpClient.ConnectAsync(host, port);
+            if (await Task.WhenAny(connectTask, Task.Delay(1000)) == connectTask) {
+                // Connection successful
+                await connectTask; // Ensure any exceptions are observed
+            } else {
+                // Timeout
+                throw new TimeoutException("The connection attempt timed out.");
+            }
         }
 
         public void Dispose() {
             if (TcpClient != null) {
                 running = false;
-
                 TcpClient.Close();
                 (TcpClient as IDisposable).Dispose();
-
             }
         }
-
-
 
         public void Send(byte[] data) {
             if (data == null) throw new ArgumentNullException(nameof(data));
@@ -77,8 +79,9 @@ namespace Kodai100.Tcp {
 
         public async Task Listen() {
 
-            if (TcpClient == null) return;
+            if (!(TcpClient?.Connected ?? false)) return;
 
+            mainContext.Post(_ => UnityEngine.Debug.Log("connected"), null);
             running = true;
 
             while (running) {
@@ -91,7 +94,6 @@ namespace Kodai100.Tcp {
             }
 
             try {
-
                 while (Stream.DataAvailable) {
                     using var reader = new StreamReader(Stream, Encoding.UTF8, false, 4096, leaveOpen: true);
                     await Task.Run(() => {
@@ -100,8 +102,6 @@ namespace Kodai100.Tcp {
                         char prev = '\0';
                         while (true) {
                             next = reader.Read();
-
-
                             if (next == 10) {
                                 var r1 = Encoding.UTF8.GetString(bytes.ToArray());
                                 bytes.Clear();
@@ -118,14 +118,11 @@ namespace Kodai100.Tcp {
                             var res = Encoding.UTF8.GetString(bytes.ToArray());
                             mainContext.Post(_ => OnMessage.Invoke(res), null);
                         }
-
                     });
                 }
-
             } catch (Exception ex) {
                 throw new ApplicationException("Attempt to receive failed.", ex);
             }
         }
-
     }
 }

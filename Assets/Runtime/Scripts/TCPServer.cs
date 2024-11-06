@@ -45,10 +45,6 @@ namespace Kodai100.Tcp {
             OnDisconnected = onDisconnected;
         }
 
-
-
-
-
         public async Task Listen() {
             lock (this) {
                 if (listener != null)
@@ -137,6 +133,11 @@ namespace Kodai100.Tcp {
             clients.Remove(client);
         }
 
+        public void DisconnectClient(TcpClient client) {
+            clients.Remove(client);
+            client.Close();
+        }
+
 
         private async Task NetworkStreamHandler(TcpClient client) {
 
@@ -154,7 +155,7 @@ namespace Kodai100.Tcp {
                                 if (next == 10) {
                                     var r1 = Encoding.UTF8.GetString(bytes.ToArray());
                                     bytes.Clear();
-                                    mainContext.Post(_ => OnMessage.Invoke(r1), null);
+                                    mainContext.Post(_ => OnMessage.Invoke(r1, client), null);
                                     continue;
                                 }
                                 prev = (char)next;
@@ -165,7 +166,7 @@ namespace Kodai100.Tcp {
                             };
                             if (bytes.Count > 0) {
                                 var res = Encoding.UTF8.GetString(bytes.ToArray());
-                                mainContext.Post(_ => OnMessage.Invoke(res), null);
+                                mainContext.Post(_ => OnMessage.Invoke(res, client), null);
                             }
                         });
                     }

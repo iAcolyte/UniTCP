@@ -131,8 +131,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 275373278}
-  - component: {fileID: 275373280}
   - component: {fileID: 275373279}
+  - component: {fileID: 275373280}
   m_Layer: 0
   m_Name: TCP
   m_TagString: Untagged
@@ -169,9 +169,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   host: 127.0.0.1
   port: 7005
-  autoReconnect: 1
+  autoReconnect: 0
   reconnectInterval: 2
-  availabilityCheck: 1
+  availabilityCheck: 0
   availabilityCheckInterval: 2
   messageReceived:
     m_PersistentCalls:
@@ -195,13 +195,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   port: 7005
+  started:
+    m_PersistentCalls:
+      m_Calls: []
+  stopped:
+    m_PersistentCalls:
+      m_Calls: []
   messageReceived:
     m_PersistentCalls:
       m_Calls: []
   established:
     m_PersistentCalls:
       m_Calls: []
-  disconnected:
+  clientDisconnected:
     m_PersistentCalls:
       m_Calls: []
 --- !u!1 &739416536

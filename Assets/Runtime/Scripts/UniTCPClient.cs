@@ -39,8 +39,8 @@ namespace UniTCP {
         [Min(0.1f)]
         [SerializeField] private float availabilityCheckInterval = 1.0f;
 
-        [SerializeField] private OnMessageEvent messageReceived;
-        public OnMessageEvent MessageReceived => messageReceived;
+        [SerializeField] private UnityEvent<string> messageReceived;
+        public UnityEvent<string> MessageReceived => messageReceived;
 
         [SerializeField] private UnityEvent connected = new();
         public UnityEvent Connected => connected;
@@ -61,25 +61,28 @@ namespace UniTCP {
 
         private TcpCommunicator? tcpClient;
         private Coroutine? availabilityRoutine;
+        private Coroutine? reconnectRoutine;
 
-        private void OnEnable() {
+        private async void OnEnable() {
             try {
-                tcpClient = new TcpCommunicator(host, port, messageReceived);
-                Task.Run(tcpClient.Listen);
+                tcpClient = new TcpCommunicator(messageReceived);
+                await tcpClient.Connect(host, port);
+                _ = Task.Run(() => tcpClient.Listen());
             } catch (SocketException ex) {
                 Debug.LogError($"SocketException : {ex.Message}");
                 if (!autoReconnect) {
                     enabled = false;
                     return;
                 }
-                StartCoroutine(ReconnectAttempt());
+                reconnectRoutine = StartCoroutine(ReconnectAttempt());
                 return;
             }
             connected.Invoke();
-            availabilityRoutine = StartCoroutine(CheckAliveLoop());
+            if (availabilityCheck) availabilityRoutine = StartCoroutine(CheckAliveLoop());
         }
 
         private IEnumerator ReconnectAttempt() {
+            if (!autoReconnect) yield break;
             yield return new WaitForSeconds(reconnectInterval);
             OnEnable();
         }
@@ -105,12 +108,14 @@ namespace UniTCP {
 
         private void OnDisable() {
             tcpClient?.Dispose();
+            if (reconnectRoutine is not null) StopCoroutine(reconnectRoutine);
         }
 
         public void SendMessageToServer(string data, bool withTerminator = false) {
             if (!IsConnected) {
                 LostConnectionBehaviour();
-                throw new InvalidOperationException("Client not connected");
+                return;
+                //throw new InvalidOperationException("Client not connected");
             }
             try {
                 if (!string.IsNullOrEmpty(data)) {

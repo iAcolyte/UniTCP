@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using UnityEngine;
+using UnityEngine.Events;
 
 namespace UniTCP {
     public class UniTCPServer: MonoBehaviour {
@@ -15,20 +16,25 @@ namespace UniTCP {
             set => port = value;
         }
 
+        [SerializeField] private UnityEvent started;
+        public UnityEvent Started => started;
+        [SerializeField] private UnityEvent stopped;
+        public UnityEvent Stopped => stopped;
+
         [SerializeField] private OnMessageEvent messageReceived;
         public OnMessageEvent MessageReceived => messageReceived;
         [SerializeField] private OnEstablishedEvent established;
         public OnEstablishedEvent Established => established;
-        [SerializeField] private OnDisconnectedEvent disconnected;
-        public OnDisconnectedEvent Disconnected => disconnected;
+        [SerializeField] private OnDisconnectedEvent clientDisconnected;
+        public OnDisconnectedEvent ClientDisconnected => clientDisconnected;
+
+
+
         private TCPServer? tcpServer;
 
         private CancellationTokenSource source;
 
         private void Start() {
-            messageReceived.AddListener(Debug.Log);
-            established.AddListener(Debug.Log);
-            disconnected.AddListener(Debug.Log);
         }
 
         private void OnEnable() {
@@ -36,15 +42,22 @@ namespace UniTCP {
             tcpServer = new TCPServer(new IPEndPoint(IPAddress.Any, port),
                 messageReceived,
                 established,
-                disconnected,
+                clientDisconnected,
                 source.Token);
             _ = tcpServer.Listen();
+            started.Invoke();
         }
 
         private void OnDisable() {
             source.Cancel();
             tcpServer?.Dispose();
             tcpServer = null;
+            stopped.Invoke();
+        }
+
+        public void DisconnectClient(TcpClient client) {
+            if (tcpServer is null) throw new InvalidOperationException("Can't disconnect client with disabled server");
+            tcpServer.DisconnectClient(client);
         }
 
         public void BroadcastToClients(string data) {
