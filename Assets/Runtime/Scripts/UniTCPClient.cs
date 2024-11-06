@@ -16,7 +16,7 @@ namespace UniTCP {
             set => host = value.ToString();
         }
 
-        [SerializeField] private ushort port = 7000;
+        [SerializeField] private ushort port = 42674;
         public ushort Port {
             get => port;
             set => port = value;

@@ -10,7 +10,7 @@ using UnityEngine.Events;
 
 namespace UniTCP {
     public class UniTCPServer: MonoBehaviour {
-        [SerializeField] private ushort port = 7000;
+        [SerializeField] private ushort port = 42674;
         public ushort Port {
             get => port;
             set => port = value;
@@ -62,14 +62,21 @@ namespace UniTCP {
 
         public void BroadcastToClients(string data) {
             if (tcpServer is null) throw new InvalidOperationException("Can't broadcast data with disabled server");
+            if (!data.EndsWith('\n')) data += '\n';
             var msg = UniTCPUtilities.BuildMessage(data);
             tcpServer.BroadcastToClients(msg);
         }
 
         public void SendMessageToClient(TcpClient client, string data) {
             if (tcpServer is null) throw new InvalidOperationException("Can't broadcast data with disabled server");
+            if (!data.EndsWith('\n')) data += '\n';
             var msg = UniTCPUtilities.BuildMessage(data);
             tcpServer.SendMessageToClient(client, msg);
+        }
+        public void SendMessageToClient(TcpClient client, char data) {
+            if (tcpServer is null) throw new InvalidOperationException("Can't broadcast data with disabled server");
+            //var msg = UniTCPUtilities.BuildMessage(data);
+            tcpServer.SendMessageToClient(client, new byte[] { (byte)data });
         }
     }
 }
